@@ -10,6 +10,11 @@ not a fine-tuned transformer. The point was to see how far that gets on real
 prompt-injection data when the evaluation is done honestly — held-out splits,
 cross-validation, an out-of-distribution test, and statistical significance tests.
 
+**▶ Live demo:** **https://llmshield-demo.onrender.com** — an "Acme Bank support bot"
+you can try to jailbreak. The shield sits in front and blocks attacks before they
+reach the bot; normal questions get answered. (Free tier — the first request may take
+~30s while the service wakes up.)
+
 > **Status:** research / portfolio project. Not a production security product, and
 > no guardrail catches everything (see [Limitations](#limitations)). Treat it as one
 > layer, not a guarantee.
@@ -75,11 +80,11 @@ print(res.explain())     # why, with the closest known attack
 
 A small "company support bot" scenario — you play the user/attacker, the shield sits
 between you and a real Claude-backed bot, and attacks are blocked before they reach it.
+Try it live at **https://llmshield-demo.onrender.com**, or run it locally:
 
 ```bash
-python eval/fetch_data.py     # pull the training data
-python eval/build_best.py     # train + save the model
-python run_web.py             # http://localhost:8090
+python eval/make_deploy_model.py   # train + save the demo model (needs VOYAGE_API_KEY)
+python run_web.py                  # http://localhost:8090
 ```
 
 ## How it works
