@@ -1,0 +1,9 @@
+# v0 cekirdek (Shield + kural dedektorleri): ek bagimlilik yok (saf Python).
+
+# ML / degerlendirme adimlari icin:
+voyageai>=0.3          # embedding (ml_injection)
+scikit-learn>=1.3      # DecisionTree (karsilastirma) + train_test_split
+neural-trees>=0.1.2    # SoftDecisionTree + combined_5x2cv_f_test + mcnemar_test (torch ceker)
+numpy<2                # ONEMLI: torch/neural-trees bu ortamda numpy<2 ister
+fastapi>=0.104
+uvicorn>=0.24
