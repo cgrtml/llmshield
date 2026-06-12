@@ -16,7 +16,8 @@ from reasongate.detectors.base import Detector
 from reasongate.detectors import (InjectionDetector, LeakageDetector,
                                  NormalizationDetector)
 from reasongate.detectors.indirect import IndirectInjectionDetector
-from reasongate.types import ShieldResult
+from reasongate.detectors.provenance import ProvenanceDetector
+from reasongate.types import Segment, ShieldResult
 
 
 class Shield:
@@ -25,7 +26,8 @@ class Shield:
                  output_detectors: Optional[List[Detector]] = None,
                  context_detectors: Optional[List[Detector]] = None,
                  block_threshold: float = 0.8,
-                 flag_threshold: float = 0.5):
+                 flag_threshold: float = 0.5,
+                 provenance_cap: float = 0.5):
         # Varsayilan: injection + obfuscation (gizleme) kalkani birlikte.
         # NormalizationDetector regex'i atlatmak icin gizlenmis saldirilari
         # (zero-width, homoglyph, leetspeak, aralikli harf) yakalar.
@@ -37,6 +39,10 @@ class Shield:
             IndirectInjectionDetector()]
         self.block_threshold = block_threshold
         self.flag_threshold = flag_threshold
+        # Provenance: SADECE Segment-API'ye opt-in edilince calisir (asagida).
+        # Plain str/list[str] -> provenance KAPALI -> eski davranis birebir.
+        # CAP karar-seviyesi karma-guven FPR'den kalibre edilecek (su an parametre).
+        self._provenance = ProvenanceDetector(cap=provenance_cap)
 
     def scan_input(self, prompt: str) -> ShieldResult:
         dets = [d.scan(prompt) for d in self.input_detectors]
@@ -45,16 +51,30 @@ class Shield:
 
     def scan_context(self, segments) -> ShieldResult:
         """Retrieve edilen icerigi (RAG dokumani, tool ciktisi, web sayfasi)
-        dolayli-enjeksiyona karsi tarar. segments: str veya str listesi."""
-        if isinstance(segments, str):
+        dolayli-enjeksiyona karsi tarar.
+
+        segments: str | list[str] | Segment | list[Segment]. Segment GECILIRSE
+        provenance dedektoru aktiflesir (koken-temelli prior); plain str ise
+        KAPALI kalir (eski davranis birebir korunur — korunan yol risksiz)."""
+        if isinstance(segments, (str, Segment)):
             segments = [segments]
+        segments = segments or []
+        # Provenance YALNIZ en az bir Segment metadata'si verilince acilir.
+        provenance_on = any(isinstance(s, Segment) for s in segments)
         dets = []
-        for i, seg in enumerate(segments or []):
+        for i, raw in enumerate(segments):
+            seg = raw if isinstance(raw, Segment) else None
+            text = seg.text if seg is not None else raw
             for d in self.context_detectors:
-                det = d.scan(seg)
+                det = d.scan(text)
                 if det.matches:                      # sadece sinyal taşıyanları raporla
                     det.reason = f"[parca {i}] " + det.reason
                     dets.append(det)
+            if provenance_on and seg is not None:
+                pdet = self._provenance.scan_segment(seg)
+                if pdet.matches:
+                    pdet.reason = f"[parca {i}] " + pdet.reason
+                    dets.append(pdet)
         if not dets:
             return ShieldResult(action="allow", stage="context", detections=[])
         action, _ = policy.decide(dets, self.block_threshold, self.flag_threshold)

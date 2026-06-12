@@ -19,6 +19,21 @@ class Detection:
 
 
 @dataclass
+class Segment:
+    """Retrieve edilen/arac-uretilen bir icerik parcasi + KOKEN metadata'si.
+
+    Provenance-aware scan_context icin: bir talimatin KULLANICIDAN mi yoksa
+    RETRIEVE edilen icerikten mi geldigini metin DEGIL koken belirler
+    (bkz. _notes/spec_17_provenance.md). Geriye-uyumlu: scan_context plain
+    str de kabul eder; o zaman provenance KAPALIDIR (eski davranis birebir).
+    """
+    text: str
+    source: str = "retrieved"      # "user" | "retrieved" | "tool" | "web" | "file"
+    trust: str = "untrusted"       # "trusted" | "untrusted"
+    domain: Optional[str] = None   # koken (orn. "wikipedia.org", "inbox", "vendor-x")
+
+
+@dataclass
 class ShieldResult:
     action: str              # "allow" | "flag" | "block"
     stage: str               # "input" | "output"
